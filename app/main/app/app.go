@@ -1,0 +1,136 @@
+package app
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"reflect"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/brunobotter/notification-system/app/main/container"
+	"github.com/spf13/cobra"
+)
+
+type Application struct {
+	wg         *sync.WaitGroup
+	context    context.Context
+	cancel     context.CancelFunc
+	signalChan chan os.Signal
+	container  container.Container
+	providers  []any
+	silent     bool
+}
+
+func NewApplication(providers []any) *Application {
+	app := &Application{
+		wg:         &sync.WaitGroup{},
+		signalChan: make(chan os.Signal, 1),
+		container:  container.NewContainer(),
+		providers:  providers,
+		silent:     false,
+	}
+
+	app.container.Singleton(func() *Application {
+		return app
+	})
+	return app
+}
+
+func (app *Application) setupContext() {
+	ctx, cancel := context.WithCancel(context.Background())
+	app.context = ctx
+	app.cancel = cancel
+	app.container.Singleton(func() context.Context {
+		return ctx
+	})
+}
+
+func (app *Application) registerProviders() {
+	for _, provider := range app.providers {
+		ref := reflect.ValueOf(provider)
+		method := ref.MethodByName("Register")
+		if !method.IsValid() {
+			continue
+		}
+		start := time.Now()
+		args := []reflect.Value{reflect.ValueOf(app.container)}
+		method.Call(args)
+		app.logProvidersState("registered", ref.Elem().Type().Name(), time.Since(start))
+	}
+}
+
+func (app *Application) logProvidersState(state string, providerName string, execution time.Duration) {
+	if !app.silent {
+		log.Printf("%s [%s][%s]", providerName+strings.Repeat(" ", 35-len(providerName)), state, execution)
+	}
+}
+
+func (app *Application) bootstrapProvider() {
+	for _, provider := range app.providers {
+		ref := reflect.ValueOf(provider)
+		method := ref.MethodByName("Boot")
+		if !method.IsValid() {
+			continue
+		}
+		app.wg.Add(1)
+		go func() {
+			start := time.Now()
+			args := []reflect.Value{reflect.ValueOf(app.container)}
+			method.Call(args)
+			app.logProvidersState("bootstrapped", ref.Elem().Type().Name(), time.Since(start))
+		}()
+
+	}
+	app.wg.Wait()
+}
+
+func (app *Application) shutdownProviders() {
+	for _, provider := range app.providers {
+		ref := reflect.ValueOf(provider)
+		method := ref.MethodByName("Shutdown")
+		if !method.IsValid() {
+			continue
+		}
+		start := time.Now()
+		args := []reflect.Value{reflect.ValueOf(app.container)}
+		method.Call(args)
+		app.logProvidersState("stopped", ref.Elem().Type().Name(), time.Since(start))
+	}
+}
+
+func (app *Application) WaitForShutdownSignal() {
+	signal.Notify(app.signalChan, os.Interrupt, syscall.SIGTERM)
+	<-app.signalChan
+}
+
+func (app *Application) executionRootCommand() {
+	var rootCommand *cobra.Command
+	app.container.Resolve(&rootCommand)
+	err := rootCommand.ExecuteContext(app.context)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func (app *Application) Bootstrap() {
+	if len(os.Args[1:]) == 0 {
+		app.silent = true
+	}
+	app.setupContext()
+	app.registerProviders()
+	app.bootstrapProvider()
+	app.executionRootCommand()
+	app.shutdown()
+}
+
+func (app *Application) shutdown() {
+	app.cancel()
+	app.wg.Wait()
+	app.shutdownProviders()
+}
