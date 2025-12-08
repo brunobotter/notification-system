@@ -34,10 +34,10 @@ func NewApplication(providers []any) *Application {
 		providers:  providers,
 		silent:     false,
 	}
-
 	app.container.Singleton(func() *Application {
 		return app
 	})
+
 	return app
 }
 
@@ -57,16 +57,11 @@ func (app *Application) registerProviders() {
 		if !method.IsValid() {
 			continue
 		}
+
 		start := time.Now()
 		args := []reflect.Value{reflect.ValueOf(app.container)}
 		method.Call(args)
-		app.logProvidersState("registered", ref.Elem().Type().Name(), time.Since(start))
-	}
-}
-
-func (app *Application) logProvidersState(state string, providerName string, execution time.Duration) {
-	if !app.silent {
-		log.Printf("%s [%s][%s]", providerName+strings.Repeat(" ", 35-len(providerName)), state, execution)
+		app.logProviderState("registered", ref.Elem().Type().Name(), time.Since(start))
 	}
 }
 
@@ -80,26 +75,31 @@ func (app *Application) bootstrapProvider() {
 		app.wg.Add(1)
 		go func() {
 			start := time.Now()
-			args := []reflect.Value{reflect.ValueOf(app.container)}
-			method.Call(args)
-			app.logProvidersState("bootstrapped", ref.Elem().Type().Name(), time.Since(start))
+			defer app.wg.Done()
+			app.container.Call(method.Interface())
+			app.logProviderState("bootstrapped", ref.Elem().Type().Name(), time.Since(start))
 		}()
-
 	}
 	app.wg.Wait()
 }
 
 func (app *Application) shutdownProviders() {
-	for _, provider := range app.providers {
+	for i := len(app.providers) - 1; i >= 0; i-- {
+		provider := app.providers[i]
 		ref := reflect.ValueOf(provider)
 		method := ref.MethodByName("Shutdown")
 		if !method.IsValid() {
 			continue
 		}
 		start := time.Now()
-		args := []reflect.Value{reflect.ValueOf(app.container)}
-		method.Call(args)
-		app.logProvidersState("stopped", ref.Elem().Type().Name(), time.Since(start))
+		app.container.Call(method.Interface())
+		app.logProviderState("stopped", ref.Elem().Type().Name(), time.Since(start))
+	}
+}
+
+func (app *Application) logProviderState(state string, providerName string, executuonTime time.Duration) {
+	if !app.silent {
+		log.Printf("%s [%s][%s]", providerName+strings.Repeat(" ", 35-len(providerName)), state, executuonTime)
 	}
 }
 
@@ -109,9 +109,9 @@ func (app *Application) WaitForShutdownSignal() {
 }
 
 func (app *Application) executionRootCommand() {
-	var rootCommand *cobra.Command
-	app.container.Resolve(&rootCommand)
-	err := rootCommand.ExecuteContext(app.context)
+	var rootCmd *cobra.Command
+	app.container.Resolve(&rootCmd)
+	err := rootCmd.ExecuteContext(app.context)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
