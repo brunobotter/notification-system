@@ -34,10 +34,10 @@ func NewApplication(providers []any) *Application {
 		providers:  providers,
 		silent:     false,
 	}
+
 	app.container.Singleton(func() *Application {
 		return app
 	})
-
 	return app
 }
 
@@ -57,11 +57,16 @@ func (app *Application) registerProviders() {
 		if !method.IsValid() {
 			continue
 		}
-
 		start := time.Now()
 		args := []reflect.Value{reflect.ValueOf(app.container)}
 		method.Call(args)
-		app.logProviderState("registered", ref.Elem().Type().Name(), time.Since(start))
+		app.logProvidersState("registered", ref.Elem().Type().Name(), time.Since(start))
+	}
+}
+
+func (app *Application) logProvidersState(state string, providerName string, execution time.Duration) {
+	if !app.silent {
+		log.Printf("%s [%s][%s]", providerName+strings.Repeat(" ", 35-len(providerName)), state, execution)
 	}
 }
 
@@ -77,8 +82,9 @@ func (app *Application) bootstrapProvider() {
 			start := time.Now()
 			defer app.wg.Done()
 			app.container.Call(method.Interface())
-			app.logProviderState("bootstrapped", ref.Elem().Type().Name(), time.Since(start))
+			app.logProvidersState("bootstrapped", ref.Elem().Type().Name(), time.Since(start))
 		}()
+
 	}
 	app.wg.Wait()
 }
@@ -93,13 +99,7 @@ func (app *Application) shutdownProviders() {
 		}
 		start := time.Now()
 		app.container.Call(method.Interface())
-		app.logProviderState("stopped", ref.Elem().Type().Name(), time.Since(start))
-	}
-}
-
-func (app *Application) logProviderState(state string, providerName string, executuonTime time.Duration) {
-	if !app.silent {
-		log.Printf("%s [%s][%s]", providerName+strings.Repeat(" ", 35-len(providerName)), state, executuonTime)
+		app.logProvidersState("stopped", ref.Elem().Type().Name(), time.Since(start))
 	}
 }
 
@@ -109,9 +109,9 @@ func (app *Application) WaitForShutdownSignal() {
 }
 
 func (app *Application) executionRootCommand() {
-	var rootCmd *cobra.Command
-	app.container.Resolve(&rootCmd)
-	err := rootCmd.ExecuteContext(app.context)
+	var rootCommand *cobra.Command
+	app.container.Resolve(&rootCommand)
+	err := rootCommand.ExecuteContext(app.context)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
