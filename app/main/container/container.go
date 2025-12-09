@@ -1,6 +1,6 @@
 package container
 
-import "github.com/brunobotter/notification-system/app/main/container/golobby"
+import "github.com/brunobotter/notification-system/main/container/golobby"
 
 type Container interface {
 	Singleton(resolver interface{})

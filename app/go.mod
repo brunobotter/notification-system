@@ -27,6 +27,7 @@ require (
 )
 
 require (
+	github.com/gorilla/websocket v1.5.3
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/spf13/pflag v1.0.10 // indirect

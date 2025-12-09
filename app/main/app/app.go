@@ -12,7 +12,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brunobotter/notification-system/app/main/container"
+	"github.com/brunobotter/notification-system/main/container"
+
 	"github.com/spf13/cobra"
 )
 
