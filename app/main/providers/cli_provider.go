@@ -1,8 +1,11 @@
 package providers
 
 import (
+	"fmt"
+
 	"github.com/brunobotter/notification-system/app/main/app"
 	"github.com/brunobotter/notification-system/app/main/container"
+	"github.com/brunobotter/notification-system/app/main/server"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +23,11 @@ func (p *CliServiceProvider) Register(c container.Container) {
 			Use:   "int",
 			Short: "command line",
 			Run: func(cmd *cobra.Command, args []string) {
-				//inicialização do sesrver
-				//srv.Run(cmd.Context())
+				srv, err := server.NewServer(container)
+				if err != nil {
+					panic(fmt.Errorf("nao pode inicializar o server: %v", err))
+				}
+				srv.Run(cmd.Context())
 				app.WaitForShutdownSignal()
 			},
 		}
