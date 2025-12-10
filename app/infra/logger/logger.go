@@ -12,6 +12,7 @@ type Logger interface {
 	ErrorF(format string, args ...interface{})
 	Error(format string, args ...interface{})
 	Log(msg string)
+	Sync()
 }
 
 type loggerZap struct {
@@ -22,14 +23,11 @@ type loggerZap struct {
 }
 
 func NewLoggerZap(appName string) Logger {
-	var config zap.Config
-	var zapLogger *zap.Logger
-
+	config := zap.NewProductionConfig()
 	config.Encoding = "json"
-	config.EncoderConfig = buildEncondingConfig()
-
 	config.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel)
-	zapLogger, _ = config.Build()
+
+	zapLogger, _ := config.Build()
 
 	j := &loggerZap{
 		appName:      appName,
@@ -41,6 +39,7 @@ func NewLoggerZap(appName string) Logger {
 	j.SetCommonField(map[string]any{
 		"application_name": appName,
 	})
+
 	return j
 }
 
@@ -50,41 +49,26 @@ func (l *loggerZap) SetCommonField(commanFields map[string]any) {
 	}
 }
 
-func buildEncondingConfig() zapcore.EncoderConfig {
-	return zapcore.EncoderConfig{
-		LevelKey:       "level",
-		NameKey:        "logger",
-		MessageKey:     "key",
-		TimeKey:        "timestamp",
-		FunctionKey:    zapcore.OmitKey,
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
-	}
-}
-
 func (l *loggerZap) InfoF(format string, args ...interface{}) {
-	defer l.logger.Sync()
 	l.logger.Sugar().With(l.commonFields...).Infof(format, args...)
 }
 
 func (l *loggerZap) Info(args ...interface{}) {
-	defer l.logger.Sync()
 	l.logger.Sugar().With(l.commonFields...).Info(args...)
 }
 
 func (l *loggerZap) ErrorF(format string, args ...interface{}) {
-	defer l.logger.Sync()
 	l.logger.Sugar().With(l.commonFields...).Errorf(format, args...)
 }
 
 func (l *loggerZap) Error(format string, args ...interface{}) {
-	defer l.logger.Sync()
 	l.logger.Sugar().With(l.commonFields...).Error(args...)
 }
 
 func (l *loggerZap) Log(msg string) {
 	l.Info(msg)
+}
+
+func (l *loggerZap) Sync() {
+	_ = l.logger.Sync()
 }

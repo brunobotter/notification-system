@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/brunobotter/notification-system/infra/logger"
 	"github.com/brunobotter/notification-system/main/container"
 
 	"github.com/spf13/cobra"
@@ -133,5 +134,8 @@ func (app *Application) Bootstrap() {
 func (app *Application) shutdown() {
 	app.cancel()
 	app.wg.Wait()
+	var log logger.Logger
+	app.container.Resolve(&log)
+	log.Sync()
 	app.shutdownProviders()
 }
