@@ -6,7 +6,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceRoot}/main.go",
+            "program": "${workspaceRoot}/app/main.go",
             "dlvFlags": ["--check-go-version=false"],
                   "env": {
                 "PROFILE": "dev" // ou "prod", "test", etc.

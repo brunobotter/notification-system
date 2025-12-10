@@ -1,9 +1,9 @@
 package providers
 
 import (
-	"github.com/brunobotter/notification-system/app/main/config"
-	"github.com/brunobotter/notification-system/app/main/container"
-	"github.com/brunobotter/notification-system/app/main/logger"
+	"github.com/brunobotter/notification-system/infra/logger"
+	"github.com/brunobotter/notification-system/main/config"
+	"github.com/brunobotter/notification-system/main/container"
 )
 
 type ConfigServiceProvider struct{}

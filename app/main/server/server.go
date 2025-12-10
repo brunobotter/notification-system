@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/brunobotter/notification-system/app/main/config"
-	"github.com/brunobotter/notification-system/app/main/container"
-	"github.com/brunobotter/notification-system/app/main/logger"
-	"github.com/brunobotter/notification-system/app/main/server/router"
+	"github.com/brunobotter/notification-system/infra/logger"
+	"github.com/brunobotter/notification-system/main/config"
+	"github.com/brunobotter/notification-system/main/container"
+	"github.com/brunobotter/notification-system/main/server/router"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -40,7 +41,7 @@ func (s *Server) setup() {
 
 	s.container.Resolve(&cfg)
 
-	router.RegisterRouter(s.echo, cfg)
+	router.RegisterRouter(s.echo, cfg, s.container)
 }
 
 func (s *Server) Run(ctx context.Context) {

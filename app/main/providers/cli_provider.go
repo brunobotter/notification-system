@@ -3,9 +3,10 @@ package providers
 import (
 	"fmt"
 
-	"github.com/brunobotter/notification-system/app/main/app"
-	"github.com/brunobotter/notification-system/app/main/container"
-	"github.com/brunobotter/notification-system/app/main/server"
+	"github.com/brunobotter/notification-system/main/app"
+	"github.com/brunobotter/notification-system/main/container"
+	"github.com/brunobotter/notification-system/main/server"
+
 	"github.com/spf13/cobra"
 )
 
