@@ -1,8 +1,9 @@
 package websocket
 
 import (
-	"log"
 	"sync"
+
+	"github.com/brunobotter/notification-system/infra/logger"
 )
 
 type Hub interface {
@@ -20,36 +21,41 @@ type hubImpl struct {
 	register   chan *clientImpl
 	unregister chan *clientImpl
 	mu         sync.RWMutex
+	logger     logger.Logger
 }
 
 // NewHub cria uma nova instância do Hub.
-func NewHub() Hub {
+func NewHub(l logger.Logger) Hub {
 	return &hubImpl{
 		clients:    make(map[*clientImpl]bool),
 		broadcast:  make(chan []byte),
 		register:   make(chan *clientImpl),
 		unregister: make(chan *clientImpl),
+		logger:     l,
 	}
 }
 
 // Run inicia o loop principal do Hub, gerenciando registro, remoção e broadcast.
 func (h *hubImpl) Run() {
+	h.logger.Info("hub iniciado")
 	for {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
 			h.clients[client] = true
 			h.mu.Unlock()
-			log.Println("Novo cliente registrado")
+			h.logger.InfoF("Novo cliente registrado: %p", client)
 		case client := <-h.unregister:
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
-				log.Println("Cliente removido")
+				h.logger.InfoF("Cliente removido: %p", client)
 			}
 			h.mu.Unlock()
 		case message := <-h.broadcast:
+			h.logger.InfoF("Broadcast de mensagem para %d clientes: %s", len(h.clients), string(message))
+
 			h.mu.RLock()
 			for client := range h.clients {
 				select {
@@ -57,6 +63,8 @@ func (h *hubImpl) Run() {
 				default:
 					close(client.send)
 					delete(h.clients, client)
+					h.logger.ErrorF("Canal cheio ou cliente desconectado: %p", client)
+
 				}
 			}
 			h.mu.RUnlock()

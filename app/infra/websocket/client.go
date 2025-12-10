@@ -1,9 +1,9 @@
 package websocket
 
 import (
-	"log"
 	"time"
 
+	"github.com/brunobotter/notification-system/infra/logger"
 	"github.com/gorilla/websocket"
 )
 
@@ -22,25 +22,31 @@ const (
 
 // Client representa uma conexão WebSocket com um usuário.
 type clientImpl struct {
-	hub  Hub
-	conn *websocket.Conn
-	send chan []byte
+	hub    Hub
+	conn   *websocket.Conn
+	send   chan []byte
+	logger logger.Logger
 }
 
 // NewClient cria uma nova instância de clientImpl.
-func NewClient(conn *websocket.Conn, hub Hub) *clientImpl {
+func NewClient(conn *websocket.Conn, hub Hub, logger logger.Logger) *clientImpl {
 	return &clientImpl{
-		conn: conn,
-		hub:  hub,
-		send: make(chan []byte, 256),
+		conn:   conn,
+		hub:    hub,
+		send:   make(chan []byte, 256),
+		logger: logger,
 	}
 }
 
 // ReadPump escuta mensagens do WebSocket e repassa para o Hub.
 func (c *clientImpl) ReadPump() {
+	c.logger.InfoF("ReadPump iniciado para cliente: %p", c)
+
 	defer func() {
 		c.hub.Unregister(c)
 		c.conn.Close()
+		c.logger.InfoF("ReadPump encerrado para cliente: %p", c)
+
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
@@ -52,20 +58,28 @@ func (c *clientImpl) ReadPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("erro inesperado: %v", err)
+				c.logger.ErrorF("Erro inesperado na conexão do cliente %p: %v", c, err)
+			} else {
+				c.logger.InfoF("Conexão fechada pelo cliente %p: %v", c, err)
 			}
 			break
 		}
+		c.logger.InfoF("Mensagem recebida do cliente %p: %s", c, string(message))
+
 		c.hub.Broadcast(message)
 	}
 }
 
 // WritePump envia mensagens do canal 'send' para o WebSocket.
 func (c *clientImpl) WritePump() {
+	c.logger.InfoF("WritePump iniciado para cliente: %p", c)
+
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
+		c.logger.InfoF("WritePump encerrado para cliente: %p", c)
+
 	}()
 	for {
 		select {

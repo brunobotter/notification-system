@@ -3,6 +3,7 @@ package websocket_handler
 import (
 	"net/http"
 
+	"github.com/brunobotter/notification-system/infra/logger"
 	"github.com/brunobotter/notification-system/infra/websocket"
 	socket "github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -10,18 +11,22 @@ import (
 
 // WebSocketHandler lida com as conexões WebSocket.
 type WebSocketHandler struct {
-	hub websocket.Hub
+	hub    websocket.Hub
+	logger logger.Logger
 }
 
 // NewWebSocketHandler cria um novo handler de WebSocket.
-func NewWebSocketHandler(hub websocket.Hub) *WebSocketHandler {
-	return &WebSocketHandler{hub: hub}
+func NewWebSocketHandler(hub websocket.Hub, logger logger.Logger) *WebSocketHandler {
+	return &WebSocketHandler{
+		hub:    hub,
+		logger: logger,
+	}
 }
 
 var upgrader = socket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true }, // Ajuste para produção!
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // Handle faz o upgrade da conexão HTTP para WebSocket e registra o cliente no Hub.
@@ -31,7 +36,7 @@ func (h *WebSocketHandler) Handle(c echo.Context) error {
 		return err
 	}
 
-	client := websocket.NewClient(conn, h.hub)
+	client := websocket.NewClient(conn, h.hub, h.logger)
 	h.hub.Register(client)
 
 	go client.ReadPump()
