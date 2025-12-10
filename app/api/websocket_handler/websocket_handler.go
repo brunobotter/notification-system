@@ -4,19 +4,19 @@ import (
 	"net/http"
 
 	"github.com/brunobotter/notification-system/infra/logger"
-	"github.com/brunobotter/notification-system/infra/websocket"
+	"github.com/brunobotter/notification-system/infra/web_socket"
 	socket "github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
 
 // WebSocketHandler lida com as conexões WebSocket.
 type WebSocketHandler struct {
-	hub    websocket.Hub
+	hub    web_socket.Hub
 	logger logger.Logger
 }
 
 // NewWebSocketHandler cria um novo handler de WebSocket.
-func NewWebSocketHandler(hub websocket.Hub, logger logger.Logger) *WebSocketHandler {
+func NewWebSocketHandler(hub web_socket.Hub, logger logger.Logger) *WebSocketHandler {
 	return &WebSocketHandler{
 		hub:    hub,
 		logger: logger,
@@ -36,7 +36,7 @@ func (h *WebSocketHandler) Handle(c echo.Context) error {
 		return err
 	}
 
-	client := websocket.NewClient(conn, h.hub, h.logger)
+	client := web_socket.NewClient(conn, h.hub, h.logger)
 	h.hub.Register(client)
 
 	go client.ReadPump()
