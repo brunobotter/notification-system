@@ -3,7 +3,7 @@ package providers
 import (
 	"github.com/brunobotter/notification-system/api/websocket_handler"
 	"github.com/brunobotter/notification-system/infra/logger"
-	"github.com/brunobotter/notification-system/infra/websocket"
+	"github.com/brunobotter/notification-system/infra/web_socket"
 	"github.com/brunobotter/notification-system/main/container"
 )
 
@@ -14,7 +14,7 @@ func NewWebSocketHandlerServiceProvider() *WebSocketHandlerServiceProvider {
 }
 
 func (p *WebSocketHandlerServiceProvider) Register(c container.Container) {
-	c.Singleton(func(hub websocket.Hub, logger logger.Logger) *websocket_handler.WebSocketHandler {
+	c.Singleton(func(hub web_socket.Hub, logger logger.Logger) *websocket_handler.WebSocketHandler {
 		return websocket_handler.NewWebSocketHandler(hub, logger)
 	})
 }

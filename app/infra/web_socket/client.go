@@ -1,4 +1,4 @@
-package websocket
+package web_socket
 
 import (
 	"time"
@@ -21,25 +21,31 @@ const (
 )
 
 // Client representa uma conexão WebSocket com um usuário.
-type clientImpl struct {
-	hub    Hub
-	conn   *websocket.Conn
-	send   chan []byte
-	logger logger.Logger
+type ClientImpl struct {
+	hub        Hub
+	conn       WebSocketConn
+	Sends      chan []byte
+	logger     logger.Logger
+	PingPeriod time.Duration
 }
 
 // NewClient cria uma nova instância de clientImpl.
-func NewClient(conn *websocket.Conn, hub Hub, logger logger.Logger) *clientImpl {
-	return &clientImpl{
-		conn:   conn,
-		hub:    hub,
-		send:   make(chan []byte, 256),
-		logger: logger,
+func NewClient(conn WebSocketConn, hub Hub, logger logger.Logger, opts ...func(*ClientImpl)) *ClientImpl {
+	c := &ClientImpl{
+		conn:       conn,
+		hub:        hub,
+		Sends:      make(chan []byte, 256),
+		logger:     logger,
+		PingPeriod: pingPeriod,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // ReadPump escuta mensagens do WebSocket e repassa para o Hub.
-func (c *clientImpl) ReadPump() {
+func (c *ClientImpl) ReadPump() {
 	c.logger.InfoF("ReadPump iniciado para cliente: %p", c)
 
 	defer func() {
@@ -71,10 +77,10 @@ func (c *clientImpl) ReadPump() {
 }
 
 // WritePump envia mensagens do canal 'send' para o WebSocket.
-func (c *clientImpl) WritePump() {
+func (c *ClientImpl) WritePump() {
 	c.logger.InfoF("WritePump iniciado para cliente: %p", c)
 
-	ticker := time.NewTicker(pingPeriod)
+	ticker := time.NewTicker(c.PingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
@@ -83,7 +89,7 @@ func (c *clientImpl) WritePump() {
 	}()
 	for {
 		select {
-		case message, ok := <-c.send:
+		case message, ok := <-c.Sends:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// O canal foi fechado.
@@ -108,18 +114,18 @@ func (c *clientImpl) WritePump() {
 }
 
 // Close encerra a conexão WebSocket, remove o cliente do Hub e fecha o canal de envio.
-func (c *clientImpl) Close() error {
+func (c *ClientImpl) Close() error {
 	// Remove do Hub (caso ainda não tenha sido removido)
 	c.hub.Unregister(c)
 	// Fecha o canal de envio (WritePump irá encerrar)
-	close(c.send)
+	close(c.Sends)
 	// Fecha a conexão WebSocket
 	return c.conn.Close()
 }
 
-func (c *clientImpl) Send(message []byte) {
+func (c *ClientImpl) Send(message []byte) {
 	select {
-	case c.send <- message:
+	case c.Sends <- message:
 		// Mensagem enviada
 	default:
 		// Canal cheio ou cliente desconectado
@@ -128,7 +134,11 @@ func (c *clientImpl) Send(message []byte) {
 }
 
 // Receive lê uma mensagem do WebSocket.
-func (c *clientImpl) Receive() ([]byte, error) {
+func (c *ClientImpl) Receive() ([]byte, error) {
 	_, message, err := c.conn.ReadMessage()
 	return message, err
+}
+
+func (c *ClientImpl) CloseSendChannel() {
+	close(c.Sends)
 }
