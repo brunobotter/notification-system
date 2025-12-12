@@ -11,14 +11,14 @@ import (
 
 // WebSocketHandler lida com as conexões WebSocket.
 type WebSocketHandler struct {
-	hub    web_socket.Hub
+	Hub    web_socket.Hub
 	logger logger.Logger
 }
 
 // NewWebSocketHandler cria um novo handler de WebSocket.
 func NewWebSocketHandler(hub web_socket.Hub, logger logger.Logger) *WebSocketHandler {
 	return &WebSocketHandler{
-		hub:    hub,
+		Hub:    hub,
 		logger: logger,
 	}
 }
@@ -36,11 +36,21 @@ func (h *WebSocketHandler) Handle(c echo.Context) error {
 		return err
 	}
 
-	client := web_socket.NewClient(conn, h.hub, h.logger)
-	h.hub.Register(client)
+	// Cria o client
+	client := web_socket.NewClient(conn, h.Hub, h.logger)
 
-	go client.ReadPump()
+	// Registra no Hub
+	h.Hub.Register(client)
+
+	// Inicia o write pump (não bloqueia)
 	go client.WritePump()
 
-	return nil // A conexão WebSocket é mantida aberta pelos pumps
+	// O read pump bloqueia enquanto o WS está vivo
+	client.ReadPump()
+
+	// Quando sair do ReadPump: desconectar
+	h.Hub.Unregister(client)
+	conn.Close()
+
+	return nil
 }

@@ -26,9 +26,9 @@ func NewServer(container container.Container) (*Server, error) {
 		container: container,
 		echo:      echo.New(),
 	}
+	container.Resolve(&server.config)
 
 	container.Resolve(&server.logger)
-	container.Resolve(&server.config)
 
 	server.setup()
 	return server, nil
@@ -38,8 +38,9 @@ func (s *Server) setup() {
 	s.echo.HideBanner = true
 
 	var cfg *config.Config
-
+	var logger *logger.Logger
 	s.container.Resolve(&cfg)
+	s.container.Resolve(&logger)
 
 	router.RegisterRouter(s.echo, cfg, s.container)
 }
