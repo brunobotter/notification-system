@@ -1,5 +1,5 @@
 
-📍 Fase 1 — Conexão WebSocket funcionando
+📍 Fase 1 — Conexão WebSocket funcionando - OK
 🧱 1️⃣ Implementar o handler /ws
 
 👉 Route que:
@@ -11,19 +11,6 @@ instancia o Client com seu Hub e Logger
 chama Hub.Register(client)
 
 dispara os loops de leitura/escrita
-
-(Conforme corrigido no código anterior.)
-
-➡️ Por que isso importa?
-Sem isso o Hub nunca recebe clientes — então todo o restante do sistema não poderá entregar notificações reais.
-
-📌 Marcos de sucesso:
-
-Você conecta com o navegador/postman web socket
-
-Pode ver logs de conexão no Hub
-
-ReadPump e WritePump funcionam sem erro
 
 🧱 2️⃣ Verificação visual simples
 
@@ -64,9 +51,9 @@ Esse é o passo onde frontend/backend vão conversar.
 
 🧱 4️⃣ Enviar para um único usuário conectado
 
-Hoje seu broadcast entrega para todos.
+broadcast entrega para todos.
 
-Você precisa:
+preciso:
 
 Mapear userID → client(s)
 
@@ -133,8 +120,6 @@ todas as notificações (com paginação opcional)
 📍 Fase 7 — Testes e qualidade
 🧱 10️⃣ Escrever testes
 
-Com as interfaces que você já tem, pode testar:
-
 Hub isolado (sem WS)
 
 Client com uma conexão fake
@@ -158,7 +143,7 @@ PostgreSQL
 
 logs
 
-métricas (Prometheus/Grafana)
+métricas (Prometheus/Grafana) - AINDA A ANALISAR
 
 🧠 Roadmap resumido (ordem)
 Ordem	Tarefa
