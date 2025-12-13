@@ -1,6 +1,3 @@
-🚀 Próximos passos recomendados
-
-Vou separar por níveis de evolução, do mais imediato ao mais avançado.
 
 📍 Fase 1 — Conexão WebSocket funcionando
 🧱 1️⃣ Implementar o handler /ws
