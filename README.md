@@ -1,5 +1,6 @@
 
 📍 Fase 1 — Conexão WebSocket funcionando - OK
+
 🧱 1️⃣ Implementar o handler /ws
 
 👉 Route que:
