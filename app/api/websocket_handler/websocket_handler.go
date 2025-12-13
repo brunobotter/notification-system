@@ -30,7 +30,7 @@ var upgrader = socket.Upgrader{
 }
 
 // Handle faz o upgrade da conexão HTTP para WebSocket e registra o cliente no Hub.
-func (h *WebSocketHandler) Handle(c echo.Context) error {
+func (h *WebSocketHandler) WebScoketHandle(c echo.Context) error {
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err

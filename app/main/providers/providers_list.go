@@ -5,6 +5,6 @@ func List() []any {
 		NewConfigServiceProvider(),
 		NewCliServiceProvider(),
 		NewWebSocketServiceProvider(),
-		NewWebSocketHandlerServiceProvider(),
+		NewHandlerServiceProvider(),
 	}
 }
